@@ -6,15 +6,19 @@ import {z} from "zod";
 import {pipeline} from '@huggingface/transformers';
 import {WaveFile} from 'wavefile';
 
-const openaiClient = env.OPENAI_API_KEY
-    ? createOpenAI({ baseURL: env.OPENAI_URL, apiKey: env.OPENAI_API_KEY })
-    : null;
+function getOpenAIClient() {
+    if (!env.OPENAI_API_KEY) return null;
+    return createOpenAI({ baseURL: env.OPENAI_URL, apiKey: env.OPENAI_API_KEY });
+}
 
-const textModel = env.ANTHROPIC_API_KEY
-    ? createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(env.TEXT_MODEL)
-    : openaiClient
-        ? openaiClient.chat(env.TEXT_MODEL)
-        : (() => { throw new Error("No AI provider configured: set ANTHROPIC_API_KEY or OPENAI_API_KEY"); })();
+function getTextModel() {
+    if (env.ANTHROPIC_API_KEY) {
+        return createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(env.TEXT_MODEL);
+    }
+    const openai = getOpenAIClient();
+    if (openai) return openai.chat(env.TEXT_MODEL);
+    throw new Error("No AI provider configured: set ANTHROPIC_API_KEY or OPENAI_API_KEY");
+}
 
 export async function getTranscription(blob: Blob): Promise<string> {
     if (env.LOCAL_TRANSCRIPTION_MODEL) {
@@ -39,6 +43,7 @@ export async function getTranscription(blob: Blob): Promise<string> {
         }
     }
 
+    const openaiClient = getOpenAIClient();
     if (!openaiClient) {
         throw new Error("No transcription provider available: set LOCAL_TRANSCRIPTION_MODEL or OPENAI_API_KEY");
     }
@@ -134,7 +139,7 @@ export async function generateRecipeFromAI(
         `;
 
         const {output} = await generateText({
-            model: textModel,
+            model: getTextModel(),
             output: schema,
             messages: [
                 {
