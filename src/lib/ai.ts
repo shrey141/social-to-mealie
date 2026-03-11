@@ -74,7 +74,6 @@ export async function generateRecipeFromAI(
     tags: string[],
     images: string[],
 ) {
-    console.info("generateRecipeFromAI called, using model:", env.ANTHROPIC_API_KEY ? `anthropic/${env.TEXT_MODEL}` : `openai/${env.TEXT_MODEL}`);
     try {
         const userPrompt = `<Metadata>
             Post URL: ${postURL}
@@ -109,7 +108,6 @@ export async function generateRecipeFromAI(
         }
         `;
 
-        console.info("Calling generateText with", images.filter(img => img).length, "images");
         const {text} = await generateText({
             model: getTextModel(),
             system: "You are an expert chef assistant. Review the following recipe transcript and refine it for clarity, conciseness, and accuracy.\n" +
