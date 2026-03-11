@@ -8,6 +8,7 @@ export type recipeInfo = {
 export type envTypes = {
     OPENAI_URL: string;
     OPENAI_API_KEY: string;
+    ANTHROPIC_API_KEY: string;
     TRANSCRIPTION_MODEL: string;
     TEXT_MODEL: string;
     MEALIE_URL: string;
