@@ -142,6 +142,7 @@ export async function generateRecipeFromAI(
         }
         `;
 
+        console.info("Calling generateText with", images.filter(img => img).length, "images");
         const {output} = await generateText({
             model: getTextModel(),
             output: schema,
