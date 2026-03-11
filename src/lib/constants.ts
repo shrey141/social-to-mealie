@@ -3,6 +3,7 @@ import type { envTypes } from "@//lib/types";
 export const env: envTypes = {
     OPENAI_URL: process.env.OPENAI_URL?.trim().replace(/\/+$/, "") as string,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY?.trim() as string,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY?.trim() || ("" as string),
     TRANSCRIPTION_MODEL: (
         process.env.TRANSCRIPTION_MODEL || process.env.TRANSCRIPTION_MODEL
     )?.trim() as string,

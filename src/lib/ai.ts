@@ -1,17 +1,20 @@
 import {env} from "./constants";
 import {createOpenAI} from "@ai-sdk/openai";
+import {createAnthropic} from "@ai-sdk/anthropic";
 import {experimental_transcribe, generateText, Output} from "ai";
 import {z} from "zod";
 import {pipeline} from '@huggingface/transformers';
 import {WaveFile} from 'wavefile';
 
-const client = createOpenAI({
-    baseURL: env.OPENAI_URL,
-    apiKey: env.OPENAI_API_KEY,
-});
+const openaiClient = env.OPENAI_API_KEY
+    ? createOpenAI({ baseURL: env.OPENAI_URL, apiKey: env.OPENAI_API_KEY })
+    : null;
 
-const transcriptionModel = client.transcription(env.TRANSCRIPTION_MODEL);
-const textModel = client.chat(env.TEXT_MODEL);
+const textModel = env.ANTHROPIC_API_KEY
+    ? createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(env.TEXT_MODEL)
+    : openaiClient
+        ? openaiClient.chat(env.TEXT_MODEL)
+        : (() => { throw new Error("No AI provider configured: set ANTHROPIC_API_KEY or OPENAI_API_KEY"); })();
 
 export async function getTranscription(blob: Blob): Promise<string> {
     if (env.LOCAL_TRANSCRIPTION_MODEL) {
@@ -36,11 +39,15 @@ export async function getTranscription(blob: Blob): Promise<string> {
         }
     }
 
+    if (!openaiClient) {
+        throw new Error("No transcription provider available: set LOCAL_TRANSCRIPTION_MODEL or OPENAI_API_KEY");
+    }
+
     try {
         const audioBuffer = Buffer.from(await blob.arrayBuffer());
 
         const result = await experimental_transcribe({
-            model: transcriptionModel,
+            model: openaiClient.transcription(env.TRANSCRIPTION_MODEL),
             audio: audioBuffer,
         });
 
