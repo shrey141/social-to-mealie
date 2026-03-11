@@ -30,7 +30,10 @@ export async function getTranscription(blob: Blob): Promise<string> {
             wav.toBitDepth('32f');
             wav.toSampleRate(16000);
             let audioData: any = wav.getSamples();
-            const result = await transcriber(audioData);
+            const result = await transcriber(audioData, {
+                chunk_length_s: 30,
+                stride_length_s: 5,
+            });
 
             if (result && typeof result === 'object' && 'text' in result) {
                 return (result as any).text;
