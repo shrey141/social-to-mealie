@@ -1,8 +1,7 @@
 import {env} from "./constants";
 import {createOpenAI} from "@ai-sdk/openai";
 import {createAnthropic} from "@ai-sdk/anthropic";
-import {experimental_transcribe, generateObject} from "ai";
-import {z} from "zod";
+import {experimental_transcribe, generateText} from "ai";
 import {pipeline} from '@huggingface/transformers';
 import {WaveFile} from 'wavefile';
 
@@ -75,36 +74,6 @@ export async function generateRecipeFromAI(
     tags: string[],
     images: string[],
 ) {
-    const recipeSchema = z.object({
-        "@context": z
-            .literal("https://schema.org")
-            .default("https://schema.org"),
-        "@type": z.literal("Recipe").default("Recipe"),
-        name: z.string(),
-        image: z.string().optional(),
-        url: z.string().optional(),
-        description: z.string(),
-        recipeIngredient: z.array(z.string()),
-        recipeInstructions: z.array(
-            z.object({
-                "@type": z.literal("HowToStep").default("HowToStep"),
-                text: z.string(),
-            })
-        ),
-        keywords: z.array(z.string()).optional(),
-        nutrition: z.object({
-            "@type": z.literal("NutritionInformation").default("NutritionInformation"),
-            calories: z.string().optional(),
-            carbohydrateContent: z.string().optional(),
-            proteinContent: z.string().optional(),
-            fatContent: z.string().optional(),
-            cholesterolContent: z.string().optional(),
-            fiberContent: z.string().optional(),
-            sugarContent: z.string().optional(),
-            sodiumContent: z.string().optional(),
-        }).optional()
-    });
-
     console.info("generateRecipeFromAI called, using model:", env.ANTHROPIC_API_KEY ? `anthropic/${env.TEXT_MODEL}` : `openai/${env.TEXT_MODEL}`);
     try {
         const userPrompt = `<Metadata>
@@ -140,14 +109,13 @@ export async function generateRecipeFromAI(
         }
         `;
 
-        console.info("Calling generateObject with", images.filter(img => img).length, "images");
-        const {object} = await generateObject({
+        console.info("Calling generateText with", images.filter(img => img).length, "images");
+        const {text} = await generateText({
             model: getTextModel(),
-            schema: recipeSchema,
             system: "You are an expert chef assistant. Review the following recipe transcript and refine it for clarity, conciseness, and accuracy.\n" +
                 "Ensure ingredients and instructions are well-formatted and easy to follow.\n" +
                 "Correct any obvious errors or omissions.\n" +
-                "Output must be valid JSON-LD Schema.org Recipe format.\n" +
+                "You MUST respond with ONLY a valid JSON-LD Schema.org Recipe object. No markdown, no code blocks, no explanation — raw JSON only.\n" +
                 "The keywords field should not be modified leave it as it comes, if they are not present dont include them. Only add relevant tags dont add tags that are not relevant to the recipe.",
             messages: [
                 {
@@ -165,7 +133,9 @@ export async function generateRecipeFromAI(
                 }
             ],
         });
-        return object;
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No JSON found in AI response");
+        return JSON.parse(jsonMatch[0]);
     } catch
         (error) {
         console.error("Error generating recipe with AI:", error);
