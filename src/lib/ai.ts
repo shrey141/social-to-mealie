@@ -107,6 +107,7 @@ export async function generateRecipeFromAI(
         }),
     });
 
+    console.info("generateRecipeFromAI called, using model:", env.ANTHROPIC_API_KEY ? `anthropic/${env.TEXT_MODEL}` : `openai/${env.TEXT_MODEL}`);
     try {
         const userPrompt = `<Metadata>
             Post URL: ${postURL}
